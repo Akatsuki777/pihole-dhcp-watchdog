@@ -33,12 +33,12 @@ WIFI_INTERFACE="$WIFI_INTERFACE"
 SSID="$SSID"
 
 log_message() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - \$1" >> "$LOG_FILE"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - \$1" >> "\$LOG_FILE"
 }
 
 # Function to check WiFi connectivity
 check_wifi() {
-    if iwconfig "$WIFI_INTERFACE" 2>/dev/null | grep -q "ESSID:\"$SSID\""; then
+    if iwconfig "\$WIFI_INTERFACE" 2>/dev/null | grep -q "ESSID:\"\$SSID\""; then
         log_message "WiFi is connected."
         return 0
     fi
@@ -50,7 +50,7 @@ check_wifi() {
 reconnect_wifi() {
     log_message "Attempting to reconnect WiFi..."
     
-    sudo wpa_cli -i "$WIFI_INTERFACE" reassociate 
+    sudo wpa_cli -i "\$WIFI_INTERFACE" reassociate 
     sleep 5
 
 }
@@ -58,7 +58,7 @@ reconnect_wifi() {
 # Function to test DHCP service using dhcping
 test_dhcp_service() {
     
-    if sudo dhcping -c 127.0.0.1 -s "$PIHOLE_IP" -h 00:00:00:00:00:00 >/dev/null 2>&1; then
+    if sudo dhcping -s "\$PIHOLE_IP" -h aa:bb:cc:dd:ee:ae >/dev/null 2>&1; then
         log_message "DHCP service test PASSED"
         return 0
     else
