@@ -33,7 +33,7 @@ WIFI_INTERFACE="$WIFI_INTERFACE"
 SSID="$SSID"
 
 log_message() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - \$1" >> "\$LOG_FILE"
+    echo "\$(date '+%Y-%m-%d %H:%M:%S') - \$1" >> "$LOG_FILE"
 }
 
 # Function to check WiFi connectivity
