@@ -42,7 +42,6 @@ echo
 
 # Prompt for variables
 read -rp "Enter your Wi-Fi interface name (e.g., wlan0): " WIFI_INTERFACE
-read -rp "Enter your Wi-Fi SSID: " SSID
 
 echo
 echo "Setting up watchdog script at $WATCHDOG_PATH ..."
@@ -55,7 +54,6 @@ sudo tee "$WATCHDOG_PATH" > /dev/null <<EOF
 LOG_FILE="$LOG_FILE"
 COOLDOWN_FILE="$COOLDOWN_FILE"
 WIFI_INTERFACE="$WIFI_INTERFACE"
-SSID="$SSID"
 COOLDOWN_PERIOD="$COOLDOWN_PERIOD"
 
 log_message() {
