@@ -97,6 +97,8 @@ if sudo journalctl -k --since="5 minutes ago"| grep "\$WIFI_INTERFACE.*corrupt b
     bounce_wifi
 
     log_message "Successfully bounced Wifi!"
+else
+  log_message "Passed! No corrupt beacon found"
 fi
 
 EOF
