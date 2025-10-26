@@ -8,8 +8,34 @@ fi
 set -e
 
 WATCHDOG_PATH="/usr/local/bin/pihole-dhcp-watchdog.sh"
+COOLDOWN_FILE="/tmp/pihole-dhcp-watchdog.cooldown"
 SERVICE_PATH="/etc/systemd/system/pihole-dhcp-watchdog.service"
 LOG_FILE="/var/log/pihole-dhcp-watchdog.log"
+COOLDOWN_PERIOD=600
+
+if [[ "$1" == "uninstall" ]]; then
+  echo "=== Uninstalling Pi-hole DHCP Watchdog ==="
+
+  # Stop and disable service if exists
+  if systemctl list-unit-files | grep -q "pihole-dhcp-watchdog.service"; then
+    systemctl stop pihole-dhcp-watchdog.service 2>/dev/null || true
+    systemctl disable pihole-dhcp-watchdog.service 2>/dev/null || true
+  fi
+
+  # Remove files
+  rm -f "$SERVICE_PATH" "$WATCHDOG_PATH" "$COOLDOWN_FILE"
+
+  read -rp "Do you also want to delete the log file ($LOG_FILE)? [y/N]: " ans
+  if [[ "$ans" =~ ^[Yy]$ ]]; then
+    rm -f "$LOG_FILE"
+    echo "Log file removed."
+  fi
+
+  systemctl daemon-reload
+  echo "Uninstallation complete."
+  exit 0
+fi
+
 
 echo "=== Pi-hole DHCP Watchdog Setup ==="
 echo
@@ -29,64 +55,54 @@ sudo tee "$WATCHDOG_PATH" > /dev/null <<EOF
 
 LOG_FILE="$LOG_FILE"
 PIHOLE_IP="$PIHOLE_IP" #Static IP setup for wlan interface
+COOLDOWN_FILE="$COOLDOWN_FILE"
 WIFI_INTERFACE="$WIFI_INTERFACE"
 SSID="$SSID"
+COOLDOWN_PERIOD="$COOLDOWN_PERIOD"
 
 log_message() {
     echo "\$(date '+%Y-%m-%d %H:%M:%S') - \$1" >> "\$LOG_FILE"
 }
 
-# Function to check WiFi connectivity
-check_wifi() {
-    if iwconfig "\$WIFI_INTERFACE" 2>/dev/null | grep -q "ESSID:\"\$SSID\""; then
-        log_message "WiFi is connected."
-        return 0
-    fi
-    log_message "WiFi connection check failed"
-    return 1
-}
-
 # Function to attempt WiFi reconnection
-reconnect_wifi() {
+bounce_wifi() {
     log_message "Attempting to reconnect WiFi..."
     
-    sudo wpa_cli -i "\$WIFI_INTERFACE" reassociate 
+    sudo ip link set \$WIFI_INTERFACE down
     sleep 5
+    sudo ip link set \$WIFI_INTERFACE up
 
-}
-
-# Function to test DHCP service using dhcping
-test_dhcp_service() {
-    
-    if sudo dhcping -s "\$PIHOLE_IP" -h aa:bb:cc:dd:ee:ae >/dev/null 2>&1; then
-        log_message "DHCP service test PASSED"
-        return 0
-    else
-        log_message "DHCP service test FAILED"
-        return 1
-    fi
-}
-
-# Function to restart Pi-hole FTL service
-restart_ftl() {
-    log_message "Restarting Pi-hole FTL service..."
-    sudo systemctl restart pihole-FTL
-    sleep 10  
 }
 
 # Main script logic
 log_message "=== Starting Pi-hole DHCP Watchdog ==="
 
-#Check the wifi connectivity and reconnect till/if required
-while ! check_wifi; do
-    reconnect_wifi
-    sleep 5
-done
+#Check if in cooldown
+if [ -f "\$COOLDOWN_FILE" ]; then
+    COOLDOWN_TIME=\$(stat -c %Y "\$COOLDOWN_FILE")
+    CURRENT_TIME=\$(date +%s)
+    ELAPSED=\$((CURRENT_TIME - COOLDOWN_TIME))
+    
+    if [ \$ELAPSED -lt \$COOLDOWN_PERIOD ]; then
+        log_message "Exiting: Still under cooldown"
+        exit 0
+    else
+        rm -f "\$COOLDOWN_FILE"
+    fi
+fi
 
-#Check the dhcp service and restart service till the dhcp responds
-while ! test_dhcp_service; do
-    restart_ftl
-done 
+#Check if corrupt beacon in the past 5 minutes
+if sudo journalctl -k --since="5 minutes ago"| grep "\$WIFI_INTERFACE.*corrupt beacon"; then
+    log_message "Corrupt beacon detected..."
+    log_message "Bouncing Wifi..."
+
+    touch "\$COOLDOWN_FILE"
+
+    bounce_wifi
+
+    log_message "Successfully bounced Wifi!"
+fi
+
 EOF
 
 # Make it executable
@@ -95,6 +111,12 @@ sudo chmod +x "$WATCHDOG_PATH"
 echo
 echo "Creating systemd service..."
 echo
+
+#Create Log file
+echo
+echo "Creating log file..."
+echo
+sudo mkdir -p "$(dirname "$LOG_FILE")"
 
 # Create systemd service
 sudo tee "$SERVICE_PATH" > /dev/null <<EOF
