@@ -41,7 +41,6 @@ echo "=== Pi-hole DHCP Watchdog Setup ==="
 echo
 
 # Prompt for variables
-read -rp "Enter your Pi-hole static IP address: " PIHOLE_IP
 read -rp "Enter your Wi-Fi interface name (e.g., wlan0): " WIFI_INTERFACE
 read -rp "Enter your Wi-Fi SSID: " SSID
 
@@ -54,7 +53,6 @@ sudo tee "$WATCHDOG_PATH" > /dev/null <<EOF
 #!/bin/bash
 
 LOG_FILE="$LOG_FILE"
-PIHOLE_IP="$PIHOLE_IP" #Static IP setup for wlan interface
 COOLDOWN_FILE="$COOLDOWN_FILE"
 WIFI_INTERFACE="$WIFI_INTERFACE"
 SSID="$SSID"
