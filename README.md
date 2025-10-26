@@ -2,21 +2,8 @@
 
 ## Description
 
-This **systemd-based watchdog service** continuously monitors the Pi-hole DHCP server and automatically restarts the **FTL service** if it becomes unresponsive.  
-It is designed to mitigate a common issue where the DHCP server stops working after a temporary Wi-Fi disconnection when the router switches channels on Wi-Fi–based Pi-hole setups.
-
----
-
-## Prerequisites
-
-Ensure that the following dependency is installed on your system before proceeding:
-
-- **dhcping**
-
-You can install it using:
-```bash
-sudo apt install dhcping
-```
+This **systemd-based watchdog service** continuously monitors the wireless interface to check for any corrupt beacons and then bounces the interface if it happens.  
+It is designed to mitigate a common issue where the DHCP server stops working after a temporary Wi-Fi disconnection when the router switches frequency on Wi-Fi–based Pi-hole setups.
 
 ---
 
@@ -53,6 +40,12 @@ This project is **experimental** and currently running on my personal setup.
 I will update this section if it is a stable solution
 
 If you have a better solution than this bandaid of a solution, please do let me know.
+
+[**Experiment 1: Failed!**]
+This was a simple dhcping to the pihole device to check if a response is received, since it is on the same interface, the UDP messages will be received.
+
+[**Experiment 2**]
+This looks for corrupt beacons when reconnecting to AP after frequency change knocks the interface off the network. It bounces the interface in hopes of reconnecting.
 
 ---
 
